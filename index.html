@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<!--
+    ====================================================
+    SISTEMA DE GESTIÓN DE ACTIVIDADES DE SOPORTE TÉCNICO
+    ====================================================
+    
+    Desarrollado por: Alberto Leo Pantoja
+    Institución: Instituto Tecnológico de Veracruz
+    Departamento: Centro de Cómputo
+    Fecha: 2026
+    Versión: 1.0.0
+    
+    Descripción:
+        Sistema completo para gestionar actividades de soporte técnico,
+        con autenticación de usuarios, múltiples técnicos por actividad,
+        panel de estadísticas y exportación de datos.
+    
+    Contacto: afleop09@gmail.com
+    ====================================================
+-->
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Actividades de Soporte Tecnico</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ====================================================
+         LOGIN CONTAINER
+    ==================================================== -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="kmstools.png" alt="KMS Tools" style="width: 150px; height: auto; margin-bottom: 1rem;">
+                <h4 class="text-white mb-2">ITV SUPPORT</h4>
+                <p class="text-white-50 mb-0">Centro de Computo - Instituto Tecnologico De Veracruz</p>
+            </div>
+            
+            <div class="login-body">
+                <form id="formLogin">
+                    <div class="mb-3">
+                        <label class="form-label">Usuario:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" id="inputUsuario" class="form-control" placeholder="Ingresa tu usuario" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Contrasena:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input type="password" id="inputContrasena" class="form-control" placeholder="Ingresa tu contrasena" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePasswordLogin">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="recordarSesion">
+                        <label class="form-check-label" for="recordarSesion">Recordar sesion</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 btn-pill">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesion
+                    </button>
+                    
+                    <div id="loginError" class="alert alert-danger mt-3 d-none">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        <span id="loginErrorText"></span>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        ┬┐Necesitas una cuenta? Contacta al administrador del sistema
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         MAIN APPLICATION
+    ==================================================== -->
+    <div id="mainApp" class="app-container d-none">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <img src="kmstools.png" alt="KMS Tools" style="width: 100px; height: auto; margin-right: 15px;">
+                            <div>
+                                <h1 class="text-white">ITV SUPPORT</h1>
+                                <p class="text-white-50 mb-0">Centro de Computo - Instituto Tecnologico de Veracruz</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <div class="user-badge" onclick="abrirAdminCuenta()" style="cursor: pointer;" title="Haz clic para administrar tu cuenta">
+                                <div id="fotoPerfilHeader" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                    <i class="bi bi-person-circle" style="font-size: 1.5rem; color: white;"></i>
+                                </div>
+                                <span id="nombreUsuario">Cargando...</span>
+                                <i class="bi bi-pencil-square ms-1" style="font-size: 0.8rem; opacity: 0.8;"></i>
+                            </div>
+                            
+                            <div class="btn-group">
+                                <button id="btnExportarExcel" class="btn btn-light btn-sm" title="Exportar a Excel">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                </button>
+                                <button id="btnGestionOpciones" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalOpciones" title="Opciones">
+                                    <i class="bi bi-gear"></i>
+                                </button>
+                                <button id="btnGestionUsuarios" class="btn btn-light btn-sm btn-with-badge" data-bs-toggle="modal" data-bs-target="#modalGestionUsuarios" title="Usuarios">
+                                    <i class="bi bi-people"></i>
+                                    <span id="badgeUsuariosPendientes" class="badge bg-danger position-absolute" style="display: none; top: -5px; right: -5px; font-size: 0.6rem;">0</span>
+                                </button>
+                                <button id="btnCerrarSesion" class="btn btn-light btn-sm" title="Cerrar sesion">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="container py-4">
+            <div class="row g-4">
+                
+                <!-- SIDEBAR - New Activity Form -->
+                <div class="col-lg-4">
+                    <div class="sidebar shadow-soft">
+                        <div class="form-section">
+                            <h4 class="mb-3">
+                                <i class="bi bi-clipboard-plus text-primary me-2"></i>
+                                Nueva Actividad
+                            </h4>
+                            <form id="formActividad">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Descripcion del problema:</label>
+                                    <select id="descripcion" class="form-select" required></select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Tecnicos asignados:</label>
+                                    <select id="tecnico" class="form-select" multiple size="4" required>
+                                    </select>
+                                    <small class="text-muted">Selecciona multiples tecnicos (Ctrl+Click para seleccionar varios)</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Solicitante:</label>
+                                    <select id="solicitante" class="form-select" required></select>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Prioridad:</label>
+                                        <select id="prioridad" class="form-select">
+                                            <option value="baja">Baja</option>
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="alta">Alta</option>
+                                            <option value="urgente">Urgente</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Ubicacion:</label>
+                                        <input type="text" id="ubicacion" class="form-control" placeholder="Edificio O, Sala 101">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Departamento:</label>
+                                    <select id="departamento" class="form-select"></select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Notas iniciales:</label>
+                                    <textarea id="notasIniciales" class="form-control" rows="2" placeholder="Descripcion detallada..."></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Fecha y Hora:</label>
+                                    <div class="input-group">
+                                        <input type="datetime-local" id="fechaHora" class="form-control" required>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="establecerFechaHoraActual()">
+                                            <i class="bi bi-clock"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="btnGuardar" class="btn btn-primary w-100 btn-pill">
+                                    <i class="bi bi-save me-2"></i> Registrar Actividad
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAIN CONTENT AREA -->
+                <div class="col-lg-8">
+                    
+                    <!-- Filters for Normal Users -->
+                    <div id="filtrosUsuarioNormal" class="section-card mb-4">
+                        <div class="section-header">
+                            <h3>
+                                <i class="bi bi-funnel me-2 text-primary"></i>
+                                Filtros de Actividades
+                            </h3>
+                        </div>
+                        <div class="section-body">
+                            <div class="compact-filters mb-3">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-clock-history me-1"></i> Periodo
+                                        </label>
+                                        <select id="filtroPeriodo" class="form-select form-select-sm">
+                                            <option value="todos">Todo el periodo</option>
+                                            <option value="hoy">Hoy</option>
+                                            <option value="ayer">Ayer</option>
+                                            <option value="semana">Esta semana</option>
+                                            <option value="mes">Este mes</option>
+                                            <option value="anterior">Mes anterior</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-circle me-1"></i> Estado
+                                        </label>
+                                        <select id="filtroEstado" class="form-select form-select-sm">
+                                            <option value="todos">Todos</option>
+                                            <option value="pendiente">Pendientes</option>
+                                            <option value="en_progreso">En progreso</option>
+                                            <option value="completada">Completadas</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-person-gear me-1"></i> Técnico
+                                        </label>
+                                        <select id="filtroTecnico" class="form-select form-select-sm">
+                                            <option value="todos">Todos los técnicos</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-person-badge me-1"></i> Solicitante
+                                        </label>
+                                        <select id="filtroSolicitante" class="form-select form-select-sm">
+                                            <option value="todos">Todos los solicitantes</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-calendar-plus me-1"></i> Desde
+                                        </label>
+                                        <input type="date" id="filtroFechaDesde" class="form-control form-control-sm">
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-calendar-minus me-1"></i> Hasta
+                                        </label>
+                                        <input type="date" id="filtroFechaHasta" class="form-control form-control-sm">
+                                    </div>
+                                    
+                                    <div class="col-md-12 col-sm-12 mt-2">
+                                        <button id="btnLimpiarFiltros" class="btn btn-outline-secondary btn-sm w-100" style="min-height: 38px;" title="Limpiar todos los filtros">
+                                            <i class="bi bi-x-lg me-1"></i> Limpiar filtros
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Panel -->
+                    <div class="section-card mb-4" id="panelEstadisticas">
+                        <div class="section-header d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0">
+                                <i class="bi bi-graph-up-arrow me-2 text-success"></i>
+                                Panel de Estadisticas
+                            </h3>
+                            <button id="btnExportarEstadisticas" class="btn btn-sm btn-success" onclick="exportarEstadisticas()" title="Exportar estadisticas a Excel">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Exportar Estadisticas
+                            </button>
+                        </div>
+                        
+                        <!-- Admin Filters -->
+                        <div id="filtrosAdmin" class="section-body" style="display: none;">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-funnel text-primary me-2"></i>
+                                <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">Filtros de actividades y estadísticas</h5>
+                                <hr class="flex-grow-1 ms-3" style="opacity: 0.3;">
+                            </div>
+                            
+                            <div class="compact-filters mb-3">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-clock-history me-1"></i> Periodo
+                                        </label>
+                                        <select id="filtroPeriodoAdmin" class="form-select form-select-sm">
+                                            <option value="todos">Todo el periodo</option>
+                                            <option value="hoy">Hoy</option>
+                                            <option value="ayer">Ayer</option>
+                                            <option value="semana">Esta semana</option>
+                                            <option value="mes">Este mes</option>
+                                            <option value="anterior">Mes anterior</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-circle me-1"></i> Estado
+                                        </label>
+                                        <select id="filtroEstadoAdmin" class="form-select form-select-sm">
+                                            <option value="todos">Todos</option>
+                                            <option value="pendiente">Pendientes</option>
+                                            <option value="en_progreso">En progreso</option>
+                                            <option value="completada">Completadas</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-person-gear me-1"></i> Técnico
+                                        </label>
+                                        <select id="filtroTecnicoAdmin" class="form-select form-select-sm">
+                                            <option value="todos">Todos los técnicos</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-person-badge me-1"></i> Solicitante
+                                        </label>
+                                        <select id="filtroSolicitanteAdmin" class="form-select form-select-sm">
+                                            <option value="todos">Todos los solicitantes</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-calendar-plus me-1"></i> Desde
+                                        </label>
+                                        <input type="date" id="filtroFechaDesdeAdmin" class="form-control form-control-sm">
+                                    </div>
+                                    
+                                    <div class="col-md-2 col-sm-6">
+                                        <label class="form-label small fw-bold mb-1">
+                                            <i class="bi bi-calendar-minus me-1"></i> Hasta
+                                        </label>
+                                        <input type="date" id="filtroFechaHastaAdmin" class="form-control form-control-sm">
+                                    </div>
+                                    
+                                    <div class="col-md-12 col-sm-12 mt-2">
+                                        <button id="btnLimpiarFiltrosAdmin" class="btn btn-outline-secondary btn-sm w-100" style="min-height: 38px;" title="Limpiar todos los filtros">
+                                            <i class="bi bi-x-lg me-1"></i> Limpiar filtros
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr class="my-3" style="opacity: 0.2;">
+                        </div>
+                        
+                        <!-- Statistics Tabs -->
+                        <div class="section-body">
+                            <ul class="nav nav-tabs mb-3" id="estadisticasTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="resumen-tab" data-bs-toggle="tab" data-bs-target="#resumen" type="button" role="tab">
+                                        <i class="bi bi-speedometer2"></i> Resumen
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="departamentos-tab" data-bs-toggle="tab" data-bs-target="#departamentos" type="button" role="tab">
+                                        <i class="bi bi-building"></i> Departamentos
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="problemas-tab" data-bs-toggle="tab" data-bs-target="#problemas" type="button" role="tab">
+                                        <i class="bi bi-bug"></i> Problemas
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tecnicos-tab" data-bs-toggle="tab" data-bs-target="#tecnicos" type="button" role="tab">
+                                        <i class="bi bi-person-gear"></i> Tecnicos
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="solicitantes-tab" data-bs-toggle="tab" data-bs-target="#solicitantes" type="button" role="tab">
+                                        <i class="bi bi-person-badge"></i> Solicitantes
+                                    </button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="resumen" role="tabpanel">
+                                    <div id="resumenEstadisticas"></div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="departamentos" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm" id="tablaDepartamentos">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Departamento</th>
+                                                    <th class="text-end">Total</th>
+                                                    <th class="text-end">Pendientes</th>
+                                                    <th class="text-end">Completados</th>
+                                                    <th class="text-end">%</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="chartDepartamentos" style="height: 250px;"></div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="problemas" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm" id="tablaProblemas">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Problema</th>
+                                                    <th class="text-end">Frecuencia</th>
+                                                    <th class="text-end">%</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="chartProblemas" style="height: 250px;"></div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="tecnicos" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm" id="tablaTecnicos">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Tecnico</th>
+                                                    <th class="text-end">Total</th>
+                                                    <th class="text-end">Pendientes</th>
+                                                    <th class="text-end">En Progreso</th>
+                                                    <th class="text-end">Completadas</th>
+                                                    <th class="text-end">Tiempo Prom.</th>
+                                                    <th class="text-end">Eficiencia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="chartTecnicos" style="height: 250px;"></div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="solicitantes" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm" id="tablaSolicitantes">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Solicitante</th>
+                                                    <th class="text-end">Total</th>
+                                                    <th class="text-end">Pendientes</th>
+                                                    <th class="text-end">En Progreso</th>
+                                                    <th class="text-end">Completadas</th>
+                                                    <th class="text-end">Departamentos</th>
+                                                    <th class="text-end">Frecuencia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="chartSolicitantes" style="height: 250px;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 pt-3 border-top">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Datos segun filtros aplicados:
+                                    <span id="infoFiltroEstadisticas" class="badge bg-info ms-2">Todos los periodos</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activities List -->
+                    <div class="activities-container">
+                        <div class="activities-header">
+                            <h5>
+                                <i class="bi bi-list-task text-primary me-2"></i>
+                                Actividades Registradas
+                            </h5>
+                            <span class="badge bg-primary" id="contadorActividadesLista">0</span>
+                        </div>
+                        <div class="activities-list" id="listaActividades">
+                            <div id="loading" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <p class="mt-3 text-muted">Cargando actividades...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================
+         MODALS
+    ==================================================== -->
+
+    <!-- Options Modal -->
+    <div class="modal fade" id="modalOpciones" tabindex="-1" aria-labelledby="modalOpcionesLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalOpcionesLabel">
+                        <i class="bi bi-gear me-2"></i>Gestion de Opciones
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Problem Types -->
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-bug"></i> Tipos de Problemas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex mb-3">
+                                        <input type="text" id="inputNuevoProblema" class="form-control me-2" placeholder="Nuevo problema...">
+                                        <button type="button" id="btnAgregarProblema" class="btn btn-success">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="list-group" id="listaProblemasEditable" style="max-height: 300px; overflow-y: auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Departments -->
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-building"></i> Departamentos</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3 p-2 bg-light rounded">
+                                        <label class="form-label fw-bold small mb-2">
+                                            <i class="bi bi-building-plus"></i> Nuevo departamento:
+                                        </label>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-building"></i>
+                                                </span>
+                                                <input type="text" id="inputNuevoDepartamento" class="form-control" placeholder="Nombre del departamento">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-geo-alt"></i>
+                                                </span>
+                                                <input type="text" id="inputUbicacionDepartamento" class="form-control" placeholder="Ubicacion">
+                                            </div>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-info-circle"></i> Ubicacion predeterminada para este departamento
+                                            </small>
+                                        </div>
+                                        
+                                        <button type="button" id="btnAgregarDepartamento" class="btn btn-info btn-sm w-100 text-white">
+                                            <i class="bi bi-plus-circle"></i> Agregar departamento
+                                        </button>
+                                    </div>
+                                    
+                                    <label class="form-label fw-bold small mb-2">
+                                        <i class="bi bi-list-ul"></i> Lista de departamentos:
+                                    </label>
+                                    <div class="list-group" id="listaDepartamentosEditable" style="max-height: 250px; overflow-y: auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Requesters -->
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-person-badge"></i> Solicitantes</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3 p-2 bg-light rounded">
+                                        <label class="form-label fw-bold small mb-2">
+                                            <i class="bi bi-person-plus"></i> Nuevo solicitante:
+                                        </label>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-person"></i>
+                                                </span>
+                                                <input type="text" id="inputNuevoSolicitante" class="form-control" placeholder="Nombre completo">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white"><i class="bi bi-briefcase"></i></span>
+                                                <input type="text" id="inputPuestoSolicitante" class="form-control" placeholder="Puesto">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-building"></i>
+                                                </span>
+                                                <select id="selectDepartamentoSolicitante" class="form-select">
+                                                    <option value="">Seleccionar departamento...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="bi bi-phone"></i>
+                                                </span>
+                                                <input type="tel" id="inputTelefonoSolicitante" class="form-control" placeholder="Telefono" maxlength="10">
+                                            </div>
+                                            <small class="text-muted d-block mt-1">10 digitos, solo numeros</small>
+                                        </div>
+                                        
+                                        <button type="button" id="btnAgregarSolicitante" class="btn btn-success btn-sm w-100">
+                                            <i class="bi bi-plus-circle"></i> Agregar solicitante
+                                        </button>
+                                    </div>
+                                    
+                                    <label class="form-label fw-bold small mb-2">
+                                        <i class="bi bi-list-ul"></i> Lista de solicitantes:
+                                    </label>
+                                    <div class="list-group" id="listaSolicitantesEditable" style="max-height: 250px; overflow-y: auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Requester Modal -->
+    <div class="modal fade" id="modalEditarSolicitante" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i> Editar Solicitante
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarSolicitante">
+                        <input type="hidden" id="editSolicitanteId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del solicitante:</label>
+                            <input type="text" id="editSolicitanteNombre" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Puesto:</label>
+                            <input type="text" id="editSolicitantePuesto" class="form-control" placeholder="Puesto">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Departamento:</label>
+                            <select id="editSolicitanteDepartamento" class="form-select" required>
+                                <option value="">Seleccionar departamento...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Telefono:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                <input type="tel" id="editSolicitanteTelefono" class="form-control" placeholder="2291234567" pattern="[0-9]{10}" maxlength="10">
+                            </div>
+                            <small class="text-muted">10 digitos, solo numeros</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicionSolicitante()">
+                        <i class="bi bi-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Activity Modal -->
+    <div class="modal fade" id="modalEditarActividad" tabindex="-1" aria-labelledby="modalEditarActividadLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Editar Actividad
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarActividad">
+                        <input type="hidden" id="editarId">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Descripcion del problema:</label>
+                                <select id="editarDescripcion" class="form-select" required></select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tecnicos asignados:</label>
+                                <select id="editarTecnico" class="form-select" multiple size="4">
+                                </select>
+                                <small class="text-muted">Selecciona multiples tecnicos (Ctrl+Click)</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Solicitante:</label>
+                                <select id="editarSolicitante" class="form-select" required></select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Prioridad:</label>
+                                <select id="editarPrioridad" class="form-select">
+                                    <option value="baja">Baja</option>
+                                    <option value="normal" selected>Normal</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Estado:</label>
+                                <select id="editarEstado" class="form-select">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="en_progreso">En Progreso</option>
+                                    <option value="completada">Completada</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ubicacion:</label>
+                                <input type="text" id="editarUbicacion" class="form-control" placeholder="Ej: Edificio O, Sala 101">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Departamento:</label>
+                                <select id="editarDepartamento" class="form-select"></select>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Notas iniciales:</label>
+                                <textarea id="editarNotasIniciales" class="form-control" rows="3" placeholder="Notas del solicitante..."></textarea>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Fecha y Hora de Creacion:</label>
+                                <input type="datetime-local" id="editarCreadoEn" class="form-control" required>
+                                <small class="text-muted">Puedes ajustar la fecha y hora original</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Fecha y Hora de Completado:</label>
+                                <input type="datetime-local" id="editarCompletadoEn" class="form-control">
+                                <small class="text-muted">Opcional - se llena al completar</small>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Notas:</label>
+                                <textarea id="editarNotas" class="form-control" rows="3" placeholder="Notas adicionales..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnEliminarEdicion" class="btn btn-danger" onclick="eliminarActividadDesdeModal()">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                    <button type="button" id="btnGuardarEdicion" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Management Modal -->
+    <div class="modal fade" id="modalGestionUsuarios" tabindex="-1" aria-labelledby="modalGestionUsuariosLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-people-fill me-2"></i> Panel de Administracion de Usuarios
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h6 class="mb-1">Usuarios registrados en el sistema</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> Solo administradores pueden gestionar usuarios
+                            </small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" onclick="abrirModalCrearUsuario()" id="btnNuevoUsuario" title="Crear nuevo usuario">
+                                <i class="bi bi-person-plus"></i> Nuevo Usuario
+                            </button>
+                            <button class="btn btn-primary" onclick="exportarUsuarios()" id="btnExportarUsuarios" title="Exportar usuarios a Excel">
+                                <i class="bi bi-file-earmark-excel"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="contenedorTablaUsuarios">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando usuarios...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Cargando lista de usuarios...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="modalEditarUsuario" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i> Editar Usuario
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarUsuario">
+                        <input type="hidden" id="editUsuarioId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Usuario:</label>
+                            <input type="text" id="editUsuarioUsuario" class="form-control" placeholder="ej: jperez" required>
+                            <small class="text-muted">Solo letras, numeros y guiones bajos</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo:</label>
+                            <input type="text" id="editUsuarioNombre" class="form-control" placeholder="Juan Perez Lopez" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Correo electronico:</label>
+                            <input type="email" id="editUsuarioEmail" class="form-control" placeholder="ejemplo@correo.com">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Telefono celular:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                <input type="tel" id="editUsuarioTelefono" class="form-control" placeholder="2291234567" pattern="[0-9]{10}" maxlength="10">
+                            </div>
+                            <small class="text-muted">10 digitos, solo numeros</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Fecha de nacimiento:</label>
+                            <input type="date" id="editUsuarioFechaNacimiento" class="form-control" max="2010-12-31">
+                            <small class="text-muted">Opcional</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Rol:</label>
+                            <select id="editUsuarioRol" class="form-select">
+                                <option value="tecnico">Tecnico</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="editUsuarioActivo" checked>
+                            <label class="form-check-label" for="editUsuarioActivo">
+                                Usuario activo
+                            </label>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3">Cambiar contrasena</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nueva contrasena:</label>
+                            <div class="input-group">
+                                <input type="password" id="editUsuarioNuevaContrasena" class="form-control" placeholder="Dejar en blanco para no cambiar">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordEditNueva">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="progress mt-1" style="height: 5px;">
+                                <div id="passwordStrengthEdit" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                            </div>
+                            <small class="text-muted">Minimo 6 caracteres si deseas cambiarla</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar nueva contrasena:</label>
+                            <div class="input-group">
+                                <input type="password" id="editUsuarioConfirmarContrasena" class="form-control" placeholder="Confirmar nueva contrasena">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordEditConfirmar">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicionUsuario()">
+                        <i class="bi bi-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- My Account Modal -->
+    <div class="modal fade" id="modalAdminCuenta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-gear-wide-connected me-2"></i> Administrar mi cuenta
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="adminCuentaTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="perfil-tab" data-bs-toggle="tab" data-bs-target="#perfil" type="button" role="tab">
+                                <i class="bi bi-person"></i> Mi Perfil
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="cambiar-contrasena-tab" data-bs-toggle="tab" data-bs-target="#cambiar-contrasena" type="button" role="tab">
+                                <i class="bi bi-key"></i> Cambiar Contrasena
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="perfil" role="tabpanel">
+                            <form id="formActualizarPerfil">
+                                <div class="mb-3">
+                                    <label class="form-label">Usuario:</label>
+                                    <input type="text" id="perfilUsuario" class="form-control" placeholder="nombre.usuario" required>
+                                    <small class="text-muted">Puedes cambiar tu nombre de usuario</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre completo:</label>
+                                    <input type="text" id="perfilNombre" class="form-control bg-light" readonly disabled>
+                                    <small class="text-muted">El nombre no se puede modificar</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Correo electronico:</label>
+                                    <input type="email" id="perfilEmail" class="form-control" placeholder="tu@email.com">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Telefono celular:</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                        <input type="tel" id="perfilTelefono" class="form-control" placeholder="2291234567" pattern="[0-9]{10}" maxlength="10">
+                                    </div>
+                                    <small class="text-muted">10 digitos, solo numeros</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha de nacimiento:</label>
+                                    <input type="date" id="perfilFechaNacimiento" class="form-control" max="2010-12-31">
+                                    <small class="text-muted">Opcional</small>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">Foto de perfil:</label>
+                                    <div class="d-flex align-items-center gap-4">
+                                        <div id="vistaPreviaPerfil" class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; border: 3px solid #dee2e6; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                            <i class="bi bi-person-circle text-secondary" style="font-size: 3.5rem;"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <input type="file" id="perfilFoto_input" class="form-control" accept="image/*">
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="bi bi-info-circle"></i> JPG, PNG hasta 2MB
+                                            </small>
+                                            <div class="mt-2 d-flex gap-2">
+                                                <button type="button" id="btnGuardarFoto" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-cloud-upload"></i> Subir foto
+                                                </button>
+                                                <button type="button" id="btnEliminarFoto" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i> Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Rol:</label>
+                                    <input type="text" id="perfilRol" class="form-control bg-light" readonly disabled>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100" id="btnActualizarPerfil">
+                                    <i class="bi bi-check-circle"></i> Actualizar Perfil
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="cambiar-contrasena" role="tabpanel">
+                            <form id="formCambiarContrasena">
+                                <div class="mb-3">
+                                    <label class="form-label">Contrasena actual:</label>
+                                    <div class="input-group">
+                                        <input type="password" id="contrasenaActual" class="form-control" placeholder="Ingresa tu contrasena actual" required>
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePasswordActual">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Nueva contrasena:</label>
+                                    <div class="input-group">
+                                        <input type="password" id="nuevaContrasena" class="form-control" placeholder="Minimo 6 caracteres" required>
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePasswordNuevaCuenta">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div id="passwordStrengthCuenta" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                                    </div>
+                                    <small class="text-muted">Minimo 6 caracteres</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Confirmar nueva contrasena:</label>
+                                    <div class="input-group">
+                                        <input type="password" id="confirmarNuevaContrasena" class="form-control" placeholder="Repite la nueva contrasena" required>
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePasswordConfirmarCuenta">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning w-100" id="btnCambiarContrasena">
+                                    <i class="bi bi-key"></i> Cambiar Contrasena
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create User Modal -->
+    <div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-header-gradient">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus-fill me-2"></i> Crear Nuevo Usuario
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formCrearUsuario">
+                        <div class="mb-3">
+                            <label class="form-label">Usuario:</label>
+                            <input type="text" id="nuevoUsuario_input" class="form-control" placeholder="ej: jperez" required>
+                            <small class="text-muted">Solo letras, numeros y guiones bajos</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo:</label>
+                            <input type="text" id="nuevoNombre_input" class="form-control" placeholder="Juan Perez Lopez" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Correo electronico:</label>
+                            <input type="email" id="nuevoEmail_input" class="form-control" placeholder="ejemplo@correo.com">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Telefono celular:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                <input type="tel" id="nuevoTelefono_input" class="form-control" placeholder="2291234567" pattern="[0-9]{10}" maxlength="10">
+                            </div>
+                            <small class="text-muted">10 digitos, solo numeros</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Fecha de nacimiento:</label>
+                            <input type="date" id="nuevoFechaNacimiento_input" class="form-control" max="2010-12-31">
+                            <small class="text-muted">Opcional</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Foto de perfil:</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="vistaPreviaFoto" class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border: 2px dashed #ccc; overflow: hidden;">
+                                    <i class="bi bi-person-circle text-secondary" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" id="nuevoFotoPerfil_input" class="form-control" accept="image/*">
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle"></i> La imagen se guardara localmente (max. 2MB)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Contrasena:</label>
+                            <div class="input-group">
+                                <input type="password" id="nuevaContrasena_input" class="form-control" placeholder="Contrasena" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordNueva_input">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="progress mt-1" style="height: 5px;">
+                                <div id="passwordStrength_input" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar contrasena:</label>
+                            <div class="input-group">
+                                <input type="password" id="confirmarContrasena_input" class="form-control" placeholder="Confirmar contrasena" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordConfirmarNueva_input">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Rol:</label>
+                            <select id="nuevoRol_input" class="form-select">
+                                <option value="tecnico">Tecnico</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                            <small class="text-muted">Los administradores tienen acceso total</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="usuarioActivo_input" checked>
+                            <label class="form-check-label" for="usuarioActivo_input">
+                                Activar cuenta inmediatamente
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="crearNuevoUsuario()">
+                        <i class="bi bi-person-plus"></i> Crear Usuario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         SCRIPTS
+    ==================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="app.js"></script>
+    
+    <!-- Developer Credit -->
+    <div class="credito-desarrollador d-print-none">Desarrollado por Alberto Leo Pantoja</div>
+    
+    <!-- Main Application Script -->
+    <script>
+        // DOM Elements
+        const loginContainer = document.getElementById('loginContainer');
+        const mainApp = document.getElementById('mainApp');
+        const formLogin = document.getElementById('formLogin');
+        const loginError = document.getElementById('loginError');
+        const loginErrorText = document.getElementById('loginErrorText');
+        const btnCerrarSesion = document.getElementById('btnCerrarSesion');
+        
+        let appInicializada = false;
+
+        // UI Functions
+        function mostrarLogin() {
+            loginContainer.style.display = 'flex';
+            mainApp.classList.add('d-none');
+            
+            if (localStorage.getItem('recordarSesion') !== 'true') {
+                document.getElementById('inputUsuario').value = '';
+                document.getElementById('inputContrasena').value = '';
+            }
+        }
+        
+        function mostrarAplicacion() {
+            loginContainer.style.display = 'none';
+            mainApp.classList.remove('d-none');
+            
+            setTimeout(() => {
+                if (typeof restaurarFiltrosPosicionOriginal === 'function') {
+                    restaurarFiltrosPosicionOriginal();
+                }
+            }, 50);
+            
+            setTimeout(() => {
+                if (typeof initApp === 'function' && !appInicializada) {
+                    initApp();
+                    appInicializada = true;
+                }
+            }, 100);
+        }
+        
+        function cerrarSesion() {
+            if (confirm('┬┐Estas seguro de que quieres cerrar sesion?')) {
+                if (typeof reiniciarFiltros === 'function') {
+                    reiniciarFiltros();
+                }
+                
+                if (typeof restaurarFiltrosPosicionOriginal === 'function') {
+                    restaurarFiltrosPosicionOriginal();
+                }
+                
+                localStorage.removeItem('autenticado');
+                localStorage.removeItem('usuarioActual');
+                localStorage.removeItem('recordarSesion');
+                appInicializada = false;
+                
+                mostrarLogin();
+                if (formLogin) formLogin.reset();
+                if (loginError) loginError.classList.add('d-none');
+            }
+        }
+
+        // Password Toggle Functions
+        function configurarTogglesPassword() {
+            document.querySelectorAll('button[id^="togglePassword"]').forEach(button => {
+                button.removeEventListener('click', handleTogglePassword);
+                button.addEventListener('click', handleTogglePassword);
+            });
+        }
+
+        function handleTogglePassword(event) {
+            const button = event.currentTarget;
+            const input = button.previousElementSibling;
+            
+            if (input && input.tagName === 'INPUT') {
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                
+                const icon = button.querySelector('i');
+                icon.className = type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+            }
+        }
+        
+        // Login Handler
+        async function manejarLogin(e) {
+            e.preventDefault();
+            
+            const usuario = document.getElementById('inputUsuario').value.trim();
+            const contrasena = document.getElementById('inputContrasena').value;
+            const recordar = document.getElementById('recordarSesion').checked;
+            
+            try {
+                const resultado = await verificarCredenciales(usuario, contrasena);
+                
+                if (resultado.valido) {
+                    const usuarioInfo = resultado.usuario;
+                    
+                    localStorage.setItem('usuarioActual', JSON.stringify(usuarioInfo));
+                    localStorage.setItem('autenticado', 'true');
+                    
+                    if (recordar) localStorage.setItem('recordarSesion', 'true');
+                    else localStorage.removeItem('recordarSesion');
+                    
+                    mostrarAplicacion();
+                    loginError.classList.add('d-none');
+                } else {
+                    throw new Error(resultado.mensaje);
+                }
+            } catch (error) {
+                loginErrorText.textContent = error.message;
+                loginError.classList.remove('d-none');
+                formLogin.classList.add('shake');
+                setTimeout(() => formLogin.classList.remove('shake'), 500);
+                document.getElementById('inputContrasena').value = '';
+                document.getElementById('inputContrasena').focus();
+            }
+        }
+
+        // UI Update Functions
+        function actualizarListasEditable() {
+            console.log('=== actualizarListasEditable iniciando ===');
+            
+            if (typeof actualizarSelectDepartamentosModal === 'function') {
+                actualizarSelectDepartamentosModal();
+            }
+            
+            if (typeof opcionesProblemas !== 'undefined') {
+                const listaProblemas = document.getElementById('listaProblemasEditable');
+                if (listaProblemas) {
+                    listaProblemas.innerHTML = '';
+                    
+                    if (Array.isArray(opcionesProblemas) && opcionesProblemas.length > 0) {
+                        const problemasMinusculas = opcionesProblemas.map(p => p.toLowerCase());
+                        const indicesDuplicados = [];
+                        
+                        opcionesProblemas.forEach((problema, index) => {
+                            const problemaLower = problema.toLowerCase();
+                            const ocurrencias = problemasMinusculas.filter(p => p === problemaLower).length;
+                            if (ocurrencias > 1) {
+                                const primeraOcurrencia = problemasMinusculas.findIndex(p => p === problemaLower);
+                                if (index !== primeraOcurrencia) {
+                                    indicesDuplicados.push(index);
+                                }
+                            }
+                        });
+                        
+                        opcionesProblemas.forEach((problema, index) => {
+                            const item = document.createElement('div');
+                            item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            
+                            const esDuplicado = indicesDuplicados.includes(index);
+                            const totalOcurrencias = opcionesProblemas.filter(p => 
+                                p.toLowerCase() === problema.toLowerCase()
+                            ).length;
+                            
+                            let contenido = problema;
+                            
+                            if (esDuplicado) {
+                                contenido = `<span class="text-danger">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    ${problema} (duplicado)
+                                </span>`;
+                                item.style.backgroundColor = '#f8d7da';
+                                item.style.borderLeft = '4px solid #dc3545';
+                            } else if (totalOcurrencias > 1) {
+                                contenido = `<span class="text-warning">
+                                    <i class="bi bi-info-circle-fill me-1"></i>
+                                    ${problema} (original - ${totalOcurrencias} ocurrencias)
+                                </span>`;
+                                item.style.backgroundColor = '#fff3cd';
+                                item.style.borderLeft = '4px solid #ffc107';
+                            }
+                            
+                            item.innerHTML = `${contenido}
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarOpcion('problema', ${index})">
+                                    <i class="bi bi-trash"></i>
+                                </button>`;
+                            
+                            listaProblemas.appendChild(item);
+                        });
+                        
+                        if (indicesDuplicados.length > 0) {
+                            const mensajeDuplicados = document.createElement('div');
+                            mensajeDuplicados.className = 'alert alert-warning mt-2 mb-0 py-2 small';
+                            mensajeDuplicados.innerHTML = `
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Se detectaron ${indicesDuplicados.length} problema(s) duplicado(s). 
+                                Considera eliminar los duplicados para mantener la lista limpia.
+                            `;
+                            listaProblemas.parentNode.insertBefore(mensajeDuplicados, listaProblemas.nextSibling);
+                        }
+                    } else {
+                        listaProblemas.innerHTML = '<div class="text-muted p-2 text-center">No hay problemas registrados</div>';
+                    }
+                }
+            }
+            
+            const inputFoto = document.getElementById('nuevoFotoPerfil_input');
+            if (inputFoto) {
+                inputFoto.addEventListener('change', function() {
+                    previewFotoPerfil(this, 'vistaPreviaFoto');
+                });
+            }
+            
+            const inputFotoPerfil = document.getElementById('perfilFoto_input');
+            if (inputFotoPerfil) {
+                inputFotoPerfil.addEventListener('change', function() {
+                    previewFotoPerfil(this, 'vistaPreviaPerfil');
+                    
+                    setTimeout(() => {
+                        guardarFotoPerfil();
+                    }, 100);
+                });
+            }
+            
+            const btnEliminarFoto = document.getElementById('btnEliminarFoto');
+            if (btnEliminarFoto) {
+                btnEliminarFoto.addEventListener('click', eliminarFotoPerfil);
+            }
+            
+            const listaDepartamentosEl = document.getElementById('listaDepartamentosEditable');
+            if (listaDepartamentosEl) {
+                console.log('Actualizando lista visual de departamentos');
+                listaDepartamentosEl.innerHTML = '';
+                
+                if (typeof listaDepartamentos !== 'undefined' && listaDepartamentos && listaDepartamentos.length > 0) {
+                    console.log(`${listaDepartamentos.length} departamentos para mostrar`);
+                    
+                    listaDepartamentos.forEach((departamento) => {
+                        if (!departamento) return;
+                        
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        
+                        let contenido = `<div style="flex: 1;">
+                            <div><strong>${departamento.nombre || 'Sin nombre'}</strong></div>`;
+                        
+                        if (departamento.ubicacion) {
+                            contenido += `<div><small class="text-muted">
+                                <i class="bi bi-geo-alt"></i> ${departamento.ubicacion}
+                            </small></div>`;
+                        }
+                        
+                        contenido += `</div>`;
+                        
+                        item.innerHTML = contenido + `
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="eliminarDepartamento(${departamento.id})"
+                                    title="Eliminar departamento">
+                                <i class="bi bi-trash"></i>
+                            </button>`;
+                        
+                        listaDepartamentosEl.appendChild(item);
+                    });
+                } else {
+                    console.log('No hay departamentos para mostrar');
+                    listaDepartamentosEl.innerHTML = '<div class="text-muted p-2 text-center">No hay departamentos registrados</div>';
+                }
+            }
+            
+            if (typeof listaSolicitantes !== 'undefined') {
+                const listaSolicitantesEl = document.getElementById('listaSolicitantesEditable');
+                if (listaSolicitantesEl) {
+                    listaSolicitantesEl.innerHTML = '';
+                    
+                    if (Array.isArray(listaSolicitantes) && listaSolicitantes.length > 0) {
+                        const nombresMinusculas = listaSolicitantes
+                            .filter(s => s && s.activo)
+                            .map(s => s.nombre?.toLowerCase() || '');
+                        
+                        const indicesDuplicados = [];
+                        
+                        listaSolicitantes.forEach((solicitante, index) => {
+                            if (!solicitante || !solicitante.activo) return;
+                            
+                            const nombreLower = solicitante.nombre?.toLowerCase() || '';
+                            const ocurrencias = nombresMinusculas.filter(n => n === nombreLower).length;
+                            
+                            if (ocurrencias > 1) {
+                                const primeraOcurrencia = nombresMinusculas.findIndex(n => n === nombreLower);
+                                if (index !== primeraOcurrencia) {
+                                    indicesDuplicados.push(index);
+                                }
+                            }
+                        });
+                        
+                        listaSolicitantes.forEach((solicitante) => {
+                            if (solicitante && solicitante.id) {
+                                const esDuplicado = indicesDuplicados.includes(listaSolicitantes.indexOf(solicitante));
+                                const item = document.createElement('div');
+                                item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                                
+                                if (esDuplicado) {
+                                    item.style.backgroundColor = '#f8d7da';
+                                    item.style.borderLeft = '4px solid #dc3545';
+                                } else if (!solicitante.activo) {
+                                    item.style.backgroundColor = '#e9ecef';
+                                    item.style.opacity = '0.7';
+                                }
+                                
+                                const telefonoInfo = solicitante.telefono ? 
+                                    '<br><small class="text-muted">­čô▒ ' + solicitante.telefono.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') + '</small>' : '';
+                                
+                                item.innerHTML = `
+                                    <div style="flex: 1;">
+                                        <div>
+                                            <strong class="${esDuplicado ? 'text-danger' : ''}">
+                                                ${esDuplicado ? 'ÔÜá´ŞĆ ' : ''}${solicitante.nombre || 'Sin nombre'}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-briefcase"></i> ${solicitante.puesto || 'Puesto no especificado'}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-building"></i> ${solicitante.departamento || 'No especificado'}
+                                            </small>
+                                        </div>
+                                        ${telefonoInfo}
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="editarSolicitante(${solicitante.id})"
+                                                title="Editar solicitante">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="eliminarSolicitanteDesdeModal(${solicitante.id})"
+                                                title="Eliminar solicitante">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>`;
+                                
+                                listaSolicitantesEl.appendChild(item);
+                            }
+                        });
+                    } else {
+                        listaSolicitantesEl.innerHTML = '<div class="text-muted p-2 text-center">No hay solicitantes registrados</div>';
+                    }
+                }
+            }
+            
+            console.log('=== actualizarListasEditable finalizado ===');
+        }
+        
+        // Option Delete Function
+        window.eliminarOpcion = function(tipo, index) {
+            if (confirm('┬┐Estas seguro de eliminar esta opcion?')) {
+                if (tipo === 'problema') {
+                    opcionesProblemas.splice(index, 1);
+                    if (typeof actualizarSelectProblemas === 'function') actualizarSelectProblemas();
+                } else if (tipo === 'departamento') {
+                    opcionesDepartamentos.splice(index, 1);
+                    if (typeof actualizarSelectDepartamentos === 'function') actualizarSelectDepartamentos();
+                } else if (tipo === 'solicitante') {
+                    opcionesSolicitantes.splice(index, 1);
+                    if (typeof actualizarSelectSolicitantes === 'function') actualizarSelectSolicitantes();
+                }
+                
+                if (typeof guardarOpciones === 'function') guardarOpciones();
+                actualizarListasEditable();
+                if (typeof mostrarMensaje === 'function') mostrarMensaje('Opcion eliminada', 'success');
+            }
+        };
+        
+        // User Registration Function
+        window.registrarNuevoUsuario = async function() {
+            try {
+                const usuarioData = {
+                    usuario: document.getElementById('registroUsuario').value.trim(),
+                    nombre: document.getElementById('registroNombre').value.trim(),
+                    email: document.getElementById('registroEmail').value.trim(),
+                    contrasena: document.getElementById('registroContrasena').value,
+                    confirmarContrasena: document.getElementById('registroConfirmar').value,
+                    rol: 'tecnico'
+                };
+                
+                if (!usuarioData.usuario || !usuarioData.nombre || !usuarioData.email || 
+                    !usuarioData.contrasena || !usuarioData.confirmarContrasena) {
+                    throw new Error('Todos los campos son requeridos');
+                }
+                
+                const usuarioRegex = /^[a-zA-Z0-9_]{3,20}$/;
+                if (!usuarioRegex.test(usuarioData.usuario)) {
+                    throw new Error('Usuario invalido. Use solo letras, numeros y guiones bajos (3-20 caracteres)');
+                }
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(usuarioData.email)) {
+                    throw new Error('Correo electronico invalido');
+                }
+                
+                if (usuarioData.contrasena.length < 6) {
+                    throw new Error('La contrasena debe tener al menos 6 caracteres');
+                }
+                
+                if (usuarioData.contrasena !== usuarioData.confirmarContrasena) {
+                    throw new Error('Las contrasenas no coinciden');
+                }
+                
+                const resultado = await crearUsuario(usuarioData);
+                if (!resultado.exito) {
+                    throw new Error(resultado.mensaje);
+                }
+                
+                document.getElementById('registroError').classList.add('d-none');
+                document.getElementById('registroSuccessText').textContent = 
+                    '┬íRegistro exitoso! Tu cuenta sera activada por el administrador pronto.';
+                document.getElementById('registroSuccess').classList.remove('d-none');
+                
+                document.getElementById('formRegistro').reset();
+                
+                setTimeout(() => {
+                    const loginTab = document.getElementById('login-tab');
+                    if (loginTab) loginTab.click();
+                }, 3000);
+                
+            } catch (error) {
+                document.getElementById('registroSuccess').classList.add('d-none');
+                document.getElementById('registroErrorText').textContent = error.message;
+                document.getElementById('registroError').classList.remove('d-none');
+            }
+        };
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            configurarTogglesPassword();
+
+            const usuarioGuardado = localStorage.getItem('usuarioActual');
+            if (usuarioGuardado) {
+                mostrarAplicacion();
+            } else {
+                mostrarLogin();
+            }
+            
+            const modalGestionUsuarios = document.getElementById('modalGestionUsuarios');
+            if (modalGestionUsuarios) {
+                modalGestionUsuarios.addEventListener('show.bs.modal', function() {
+                    const usuarioActual = JSON.parse(localStorage.getItem('usuarioActual') || '{}');
+                    const btnNuevoUsuario = document.getElementById('btnNuevoUsuario');
+                    
+                    if (btnNuevoUsuario) {
+                        btnNuevoUsuario.style.display = (usuarioActual.rol === 'admin') ? 'block' : 'none';
+                    }
+                    
+                    setTimeout(() => {
+                        if (typeof cargarUsuariosParaGestion === 'function') {
+                            cargarUsuariosParaGestion();
+                        }
+                    }, 300);
+                });
+            }
+            
+            if (formLogin) formLogin.addEventListener('submit', manejarLogin);
+            if (btnCerrarSesion) btnCerrarSesion.addEventListener('click', cerrarSesion);
+            
+            const btnAgregarProblema = document.getElementById('btnAgregarProblema');
+            if (btnAgregarProblema) {
+                btnAgregarProblema.addEventListener('click', function() {
+                    const input = document.getElementById('inputNuevoProblema');
+                    const valor = input.value.trim();
+                    
+                    if (!valor) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Por favor ingresa un nombre de problema', 'warning');
+                        }
+                        return;
+                    }
+                    
+                    if (typeof validarDuplicado === 'function' && validarDuplicado('problema', valor)) {
+                        mostrarMensaje('El problema "' + valor + '" ya existe en la lista', 'warning');
+                        input.value = '';
+                        input.focus();
+                        return;
+                    }
+                    
+                    if (typeof agregarNuevaOpcion === 'function') {
+                        agregarNuevaOpcion('problema', valor);
+                        input.value = '';
+                        actualizarListasEditable();
+                    }
+                });
+            }
+
+            const btnAgregarSolicitante = document.getElementById('btnAgregarSolicitante');
+            if (btnAgregarSolicitante) {
+                btnAgregarSolicitante.addEventListener('click', async function() {
+                    const input = document.getElementById('inputNuevoSolicitante');
+                    const inputPuesto = document.getElementById('inputPuestoSolicitante');
+                    const selectDepto = document.getElementById('selectDepartamentoSolicitante');
+                    const inputTelefono = document.getElementById('inputTelefonoSolicitante');
+                    
+                    if (!input || !inputPuesto || !selectDepto) {
+                        console.error('Elementos del formulario no encontrados');
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Error en el formulario', 'error');
+                        }
+                        return;
+                    }
+                    
+                    const valor = input.value.trim();
+                    const puesto = inputPuesto.value.trim();
+                    const departamentoId = selectDepto.value;
+                    const telefono = inputTelefono?.value.trim() || '';
+                    
+                    if (!valor) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Debes ingresar un nombre de solicitante', 'warning');
+                        }
+                        input.focus();
+                        return;
+                    }
+                    
+                    if (!puesto) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Debes ingresar el puesto del solicitante', 'warning');
+                        }
+                        inputPuesto.focus();
+                        return;
+                    }
+                    
+                    if (!departamentoId) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Debes seleccionar un departamento', 'warning');
+                        }
+                        selectDepto.focus();
+                        return;
+                    }
+                    
+                    if (telefono && !/^[0-9]{10}$/.test(telefono)) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('El telefono debe tener 10 digitos numericos', 'warning');
+                        }
+                        return;
+                    }
+                    
+                    if (typeof validarDuplicado === 'function' && validarDuplicado('solicitante', valor)) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('El solicitante "' + valor + '" ya existe', 'warning');
+                        }
+                        input.value = '';
+                        input.focus();
+                        return;
+                    }
+                    
+                    let creadoPor = null;
+                    const usuarioStr = localStorage.getItem('usuarioActual');
+                    if (usuarioStr) {
+                        try {
+                            const usuario = JSON.parse(usuarioStr);
+                            creadoPor = usuario.id;
+                            console.log('Usuario actual ID:', creadoPor, 'Tipo:', typeof creadoPor);
+                        } catch (e) {
+                            console.error('Error parseando usuario:', e);
+                        }
+                    }
+                    
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Agregando...';
+                    this.disabled = true;
+                    
+                    try {
+                        const resultado = await agregarSolicitante(valor, puesto, departamentoId, telefono, creadoPor);
+                        
+                        if (resultado.exito) {
+                            if (typeof mostrarMensaje === 'function') {
+                                mostrarMensaje(resultado.mensaje, 'success');
+                            }
+                            input.value = '';
+                            inputPuesto.value = '';
+                            selectDepto.value = '';
+                            if (inputTelefono) inputTelefono.value = '';
+                            
+                            if (typeof actualizarListasEditable === 'function') {
+                                actualizarListasEditable();
+                            }
+                        } else {
+                            if (typeof mostrarMensaje === 'function') {
+                                mostrarMensaje(resultado.mensaje, 'error');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error al agregar solicitante:', error);
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Error: ' + error.message, 'error');
+                        }
+                    } finally {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                });
+            }
+            
+            const btnAgregarDepartamento = document.getElementById('btnAgregarDepartamento');
+            if (btnAgregarDepartamento) {
+                const nuevoBtn = btnAgregarDepartamento.cloneNode(true);
+                btnAgregarDepartamento.parentNode.replaceChild(nuevoBtn, btnAgregarDepartamento);
+                
+                nuevoBtn.addEventListener('click', async function() {
+                    const input = document.getElementById('inputNuevoDepartamento');
+                    const inputUbicacion = document.getElementById('inputUbicacionDepartamento');
+                    
+                    if (!input) {
+                        console.error('Campo de departamento no encontrado');
+                        return;
+                    }
+                    
+                    const valor = input.value.trim();
+                    const ubicacion = inputUbicacion?.value.trim() || '';
+                    
+                    if (!valor) {
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Por favor ingresa un nombre de departamento', 'warning');
+                        }
+                        input.focus();
+                        return;
+                    }
+                    
+                    let creadoPor = null;
+                    const usuarioStr = localStorage.getItem('usuarioActual');
+                    if (usuarioStr) {
+                        try {
+                            const usuario = JSON.parse(usuarioStr);
+                            creadoPor = usuario.id;
+                            console.log('Usuario actual ID:', creadoPor);
+                        } catch (e) {
+                            console.error('Error:', e);
+                        }
+                    }
+                    
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Agregando...';
+                    
+                    try {
+                        const resultado = await agregarDepartamento(valor, ubicacion, creadoPor);
+                        
+                        if (resultado.exito) {
+                            if (typeof mostrarMensaje === 'function') {
+                                mostrarMensaje(resultado.mensaje, 'success');
+                            }
+                            input.value = '';
+                            if (inputUbicacion) inputUbicacion.value = '';
+                            
+                            if (typeof actualizarListasEditable === 'function') {
+                                actualizarListasEditable();
+                            }
+                            
+                            if (typeof actualizarSelectDepartamentos === 'function') {
+                                actualizarSelectDepartamentos();
+                            }
+                            if (typeof actualizarSelectDepartamentosModal === 'function') {
+                                actualizarSelectDepartamentosModal();
+                            }
+                        } else {
+                            if (typeof mostrarMensaje === 'function') {
+                                mostrarMensaje(resultado.mensaje, 'error');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        if (typeof mostrarMensaje === 'function') {
+                            mostrarMensaje('Error: ' + error.message, 'error');
+                        }
+                    } finally {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                });
+            }
+            
+            const modalOpciones = document.getElementById('modalOpciones');
+            if (modalOpciones) {
+                modalOpciones.addEventListener('show.bs.modal', function() {
+                    actualizarListasEditable();
+                    if (typeof actualizarSelectDepartamentosModal === 'function') {
+                        actualizarSelectDepartamentosModal();
+                    }
+                });
+            }
+            
+            const btnExportarExcel = document.getElementById('btnExportarExcel');
+            if (btnExportarExcel) {
+                btnExportarExcel.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (typeof exportarExcel === 'function') exportarExcel();
+                });
+            }
+            
+            if (typeof establecerFechaHoraActual === 'function') {
+                establecerFechaHoraActual();
+            }
+        });
+    </script>
+</body>
+</html>
